@@ -1,4 +1,5 @@
 const std = @import("std");
+const utils = @import("utils.zig");
 const shared = @import("shared.zig");
 
 const configPathFromHome = ".config/uwah/config.zon";
@@ -30,7 +31,12 @@ pub fn loadConfig(allocator: std.mem.Allocator, homeDirectoryPath: []u8) !Config
 
             try std.zon.stringify.serialize(defaultConfiguration, .{}, file.writer());
             try file.writeAll("\n");
-            return defaultConfiguration;
+
+            var config = defaultConfiguration;
+            config.databasePath = try utils.expandPath(allocator, defaultConfiguration.databasePath, homeDirectoryPath);
+            try homeDirectory.makePath(config.databasePath);
+
+            return config;
         },
         else => {
             return err;
@@ -49,7 +55,7 @@ pub fn loadConfig(allocator: std.mem.Allocator, homeDirectoryPath: []u8) !Config
     const configBytesProperNullTerminated: [:0]const u8 = configBytesNullTerminated[0..configBytes.len :0];
 
     var status: std.zon.parse.Status = .{};
-    const parsedConfiguration = std.zon.parse.fromSlice(Config, allocator, configBytesProperNullTerminated, &status, .{ .ignore_unknown_fields = true }) catch |err| switch (err) {
+    var parsedConfiguration = std.zon.parse.fromSlice(Config, allocator, configBytesProperNullTerminated, &status, .{ .ignore_unknown_fields = true }) catch |err| switch (err) {
         error.ParseZon => {
             try shared.stdout.print("there was an error parsing config file, is the .zon syntax and the schema correct?\n", .{});
             try status.format("", .{}, shared.stderr);
@@ -59,6 +65,10 @@ pub fn loadConfig(allocator: std.mem.Allocator, homeDirectoryPath: []u8) !Config
             return err;
         },
     };
+
+
+    parsedConfiguration.databasePath = try utils.expandPath(allocator, parsedConfiguration.databasePath, homeDirectoryPath);
+    try homeDirectory.makePath(parsedConfiguration.databasePath);
 
     return parsedConfiguration;
 }

@@ -9,12 +9,10 @@ fn start() anyerror!void {
     const homeDirectoryPath = try std.process.getEnvVarOwned(allocator, "HOME");
 
     const config = try configLoader.loadConfig(allocator, homeDirectoryPath);
-    try shared.stdout.print("database path: {s}\n", .{config.databasePath});
+    defer allocator.free(config.databasePath);
 
-    const path = try utils.expandPath(allocator, config.databasePath, homeDirectoryPath);
-    defer allocator.free(path);
-
-    try shared.stdout.print("resolved database path: {s}\n", .{path});
+    const databaseDirectoryPath = try utils.expandPath(allocator, config.databasePath, homeDirectoryPath);
+    defer allocator.free(databaseDirectoryPath);
 }
 
 pub fn main() !void {
