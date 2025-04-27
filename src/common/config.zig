@@ -2,18 +2,20 @@ const std = @import("std");
 const utils = @import("utils.zig");
 const shared = @import("shared.zig");
 
-const configPathFromHome = ".config/uwah/config.zon";
+pub const configPathFromHome = ".config/uwah/config.zon";
 
 pub const Config = struct {
     pruneAfter: usize, // use 0 to disable pruning
     timeWindow: usize,
     databasePath: []const u8,
+    inputDevice: ?[]const u8,
 };
 
 const defaultConfiguration: Config = .{
     .databasePath = "~/.local/share/uwah/",
     .timeWindow = 5000,
     .pruneAfter = 0,
+    .inputDevice = undefined,
 };
 
 pub fn loadConfig(allocator: std.mem.Allocator, homeDirectoryPath: []u8) !Config {
