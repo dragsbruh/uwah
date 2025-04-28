@@ -15,7 +15,7 @@ pub fn getPreferredInputDevice(allocator: std.mem.Allocator, config: configLoade
 
         const realInputDevicePath = try std.fs.realpathAlloc(allocator, configuredInputDeviceNotNullish);
 
-        if (!std.mem.startsWith(u8, realInputDevicePath,  "/dev/input/")) {
+        if (!std.mem.startsWith(u8, realInputDevicePath, "/dev/input/")) {
             try shared.stderr.print("error: the input device specified in config file was not inside /dev/input/ (specified {s})\n", .{realInputDevicePath});
             return error.SafeExitError;
         }

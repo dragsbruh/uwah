@@ -8,15 +8,11 @@ pub const Config = struct {
     pruneAfter: usize, // use 0 to disable pruning
     timeWindow: usize,
     databasePath: []const u8,
-    inputDevice: ?[]const u8,
+    inputDevice: ?[]const u8, // undefined to auto detect
+    assumeAverageWordSize: usize,
 };
 
-const defaultConfiguration: Config = .{
-    .databasePath = "~/.local/share/uwah/",
-    .timeWindow = 5000,
-    .pruneAfter = 0,
-    .inputDevice = undefined,
-};
+const defaultConfiguration: Config = .{ .databasePath = "~/.local/share/uwah/", .timeWindow = 5000, .pruneAfter = 0, .inputDevice = undefined, .assumeAverageWordSize = 5 };
 
 pub fn loadConfig(allocator: std.mem.Allocator, homeDirectoryPath: []u8) !Config {
     var homeDirectory = try std.fs.openDirAbsolute(homeDirectoryPath, .{});
@@ -59,7 +55,7 @@ pub fn loadConfig(allocator: std.mem.Allocator, homeDirectoryPath: []u8) !Config
     var status: std.zon.parse.Status = .{};
     var parsedConfiguration = std.zon.parse.fromSlice(Config, allocator, configBytesProperNullTerminated, &status, .{ .ignore_unknown_fields = true }) catch |err| switch (err) {
         error.ParseZon => {
-            try shared.stdout.print("there was an error parsing config file, is the .zon syntax and the schema correct?\n", .{});
+            try shared.stdout.print("error: there was an error parsing config file, is the .zon syntax and the schema correct?\n", .{});
             try status.format("", .{}, shared.stderr);
             return error.SafeExitError;
         },
@@ -68,9 +64,13 @@ pub fn loadConfig(allocator: std.mem.Allocator, homeDirectoryPath: []u8) !Config
         },
     };
 
-
     parsedConfiguration.databasePath = try utils.expandPath(allocator, parsedConfiguration.databasePath, homeDirectoryPath);
     try homeDirectory.makePath(parsedConfiguration.databasePath);
+
+    if (parsedConfiguration.assumeAverageWordSize == 0) {
+        try shared.stdout.print("error: the configured value for assumeAverageWordSize cannot be zero. recommended value is 5. (~/{s})\n", .{configPathFromHome});
+        return error.SafeExitError;
+    }
 
     return parsedConfiguration;
 }
